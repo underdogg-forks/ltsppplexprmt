@@ -6,9 +6,11 @@ use App\Services\LetsPeppol\Contracts\ClientInterface;
 use App\Services\LetsPeppol\Decorators\RequestLogger;
 use App\Services\LetsPeppol\Enums\RequestMethod;
 use Illuminate\Support\Facades\Log;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+#[CoversClass(RequestLogger::class)]
 class RequestLoggerTest extends TestCase
 {
     private ClientInterface $mockClient;

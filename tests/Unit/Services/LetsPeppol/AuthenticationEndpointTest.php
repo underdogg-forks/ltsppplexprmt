@@ -5,9 +5,11 @@ namespace Tests\Unit\Services\LetsPeppol;
 use App\Services\LetsPeppol\Endpoints\Kyc\AuthenticationEndpoint;
 use App\Services\LetsPeppol\Enums\RequestMethod;
 use App\Services\LetsPeppol\Testing\FakeClient;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+#[CoversClass(AuthenticationEndpoint::class)]
 class AuthenticationEndpointTest extends TestCase
 {
     private FakeClient $fakeClient;

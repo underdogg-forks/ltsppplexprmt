@@ -5,9 +5,11 @@ namespace Tests\Unit\Services\LetsPeppol;
 use App\Services\LetsPeppol\Endpoints\App\CompanyEndpoint;
 use App\Services\LetsPeppol\Enums\RequestMethod;
 use App\Services\LetsPeppol\Testing\FakeClient;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+#[CoversClass(CompanyEndpoint::class)]
 class CompanyEndpointTest extends TestCase
 {
     private FakeClient $fakeClient;
