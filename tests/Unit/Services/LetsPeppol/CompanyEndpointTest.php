@@ -3,7 +3,7 @@
 namespace Tests\Unit\Services\LetsPeppol;
 
 use App\Services\LetsPeppol\Contracts\ClientInterface;
-use App\Services\LetsPeppol\Endpoints\CompanyEndpoint;
+use App\Services\LetsPeppol\Endpoints\App\CompanyEndpoint;
 use App\Services\LetsPeppol\Enums\RequestMethod;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;

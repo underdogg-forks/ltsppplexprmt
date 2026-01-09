@@ -10,7 +10,7 @@ use App\Services\LetsPeppol\Enums\RequestMethod;
  * Namespace: App
  * Base URL: /sapi/company
  */
-class CompanyEndpoint extends ..\BaseEndpoint
+class CompanyEndpoint extends BaseEndpoint
 {
     /**
      * Get company information

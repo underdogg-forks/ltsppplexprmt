@@ -10,7 +10,7 @@ use App\Services\LetsPeppol\Enums\RequestMethod;
  * Namespace: App
  * Base URL: /sapi/document
  */
-class DocumentsEndpoint extends ..\BaseEndpoint
+class DocumentsEndpoint extends BaseEndpoint
 {
     /**
      * Validate UBL XML

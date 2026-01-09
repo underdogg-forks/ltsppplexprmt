@@ -10,7 +10,7 @@ use App\Services\LetsPeppol\Enums\RequestMethod;
  * Namespace: App
  * Base URL: /sapi/product-category
  */
-class ProductCategoriesEndpoint extends ..\BaseEndpoint
+class ProductCategoriesEndpoint extends BaseEndpoint
 {
     /**
      * List root categories
