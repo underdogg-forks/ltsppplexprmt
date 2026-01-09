@@ -27,7 +27,20 @@ class HttpClient implements ClientInterface
         array $queryParams = [],
         array $headers = []
     ): mixed {
-        $http = $this->buildHttpClient($headers);
+
+        $http = Http::baseUrl($this->baseUrl)
+            ->accept('application/json')
+            ->timeout(30);
+
+        if ($this->token) {
+            $http->withToken($this->token);
+        }
+
+        foreach ($additionalHeaders as $key => $value) {
+            $http->withHeaders([$key => $value]);
+        }
+
+        
         $url = $this->buildUrl($endpoint, $queryParams);
 
         // Check if we're sending XML content
@@ -45,35 +58,16 @@ class HttpClient implements ClientInterface
             RequestMethod::PATCH => $http->patch($url, $data),
         };
 
-        return $this->handleResponse($response);
-    }
-
-    public function setToken(string $token): static
-    {
-        $this->token = $token;
-        return $this;
-    }
-
-    public function getToken(): ?string
-    {
-        return $this->token;
-    }
-
-    protected function buildHttpClient(array $additionalHeaders = []): PendingRequest
-    {
-        $http = Http::baseUrl($this->baseUrl)
-            ->accept('application/json')
-            ->timeout(30);
-
-        if ($this->token) {
-            $http->withToken($this->token);
+        if ($response->successful()) {
+            $contentType = $response->header('Content-Type');
+        }
+            
+        // Return raw body for non-JSON responses
+        if ($contentType && !str_contains($contentType, 'application/json')) {
+                return $response->body();
         }
 
-        foreach ($additionalHeaders as $key => $value) {
-            $http->withHeaders([$key => $value]);
-        }
-
-        return $http;
+        return $response->json();
     }
 
     protected function buildUrl(string $endpoint, array $queryParams = []): string
@@ -85,24 +79,5 @@ class HttpClient implements ClientInterface
         }
 
         return $url;
-    }
-
-    protected function handleResponse($response): mixed
-    {
-        if ($response->successful()) {
-            $contentType = $response->header('Content-Type');
-            
-            // Return raw body for non-JSON responses
-            if ($contentType && !str_contains($contentType, 'application/json')) {
-                return $response->body();
-            }
-
-            return $response->json();
-        }
-
-        throw new \RuntimeException(
-            "API request failed: {$response->status()} - {$response->body()}",
-            $response->status()
-        );
     }
 }
