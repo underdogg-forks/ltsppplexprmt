@@ -12,61 +12,61 @@ namespace App\Services\LetsPeppol;
  */
 class LetsPeppolClient
 {
-    protected KycClient $kycClient;
-    protected ProxyClient $proxyClient;
-    protected AppClient $appClient;
+    protected KycService $kycService;
+    protected ProxyService $proxyService;
+    protected AppService $appService;
 
     public function __construct(
         ?string $kycUrl = null,
         ?string $proxyUrl = null,
         ?string $appUrl = null
     ) {
-        $this->kycClient = new KycClient($kycUrl);
-        $this->proxyClient = new ProxyClient($proxyUrl);
-        $this->appClient = new AppClient($appUrl);
+        $this->kycService = new KycService($kycUrl);
+        $this->proxyService = new ProxyService($proxyUrl);
+        $this->appService = new AppService($appUrl);
     }
 
     /**
-     * Get KYC client
+     * Get KYC service
      */
-    public function kyc(): KycClient
+    public function kyc(): KycService
     {
-        return $this->kycClient;
+        return $this->kycService;
     }
 
     /**
-     * Get Proxy client
+     * Get Proxy service
      */
-    public function proxy(): ProxyClient
+    public function proxy(): ProxyService
     {
-        return $this->proxyClient;
+        return $this->proxyService;
     }
 
     /**
-     * Get App client
+     * Get App service
      */
-    public function app(): AppClient
+    public function app(): AppService
     {
-        return $this->appClient;
+        return $this->appService;
     }
 
     /**
-     * Set JWT token for all clients
+     * Set JWT token for all services
      */
     public function setToken(string $token): static
     {
-        $this->kycClient->setToken($token);
-        $this->proxyClient->setToken($token);
-        $this->appClient->setToken($token);
+        $this->kycService->setToken($token);
+        $this->proxyService->setToken($token);
+        $this->appService->setToken($token);
         return $this;
     }
 
     /**
-     * Authenticate and set token for all clients
+     * Authenticate and set token for all services
      */
     public function authenticate(string $email, string $password): string
     {
-        $token = $this->kycClient->authenticate($email, $password);
+        $token = $this->kycService->authenticate($email, $password);
         $this->setToken($token);
         return $token;
     }
