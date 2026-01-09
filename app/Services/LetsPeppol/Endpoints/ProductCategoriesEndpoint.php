@@ -5,12 +5,25 @@ namespace App\Services\LetsPeppol\Endpoints;
 use App\Services\LetsPeppol\Enums\RequestMethod;
 
 /**
- * Product Categories endpoint client
+ * Product Categories endpoint client (AppService)
+ * 
+ * Namespace: App
+ * Base URL: /sapi/product-category
  */
 class ProductCategoriesEndpoint extends BaseEndpoint
 {
     /**
      * List root categories
+     * 
+     * Response:
+     * [
+     *   {
+     *     "id": 1,
+     *     "name": "Electronics",
+     *     "parentId": null,
+     *     "children": [...]
+     *   }
+     * ]
      */
     public function listRoot(bool $deep = false): array
     {
@@ -24,6 +37,12 @@ class ProductCategoriesEndpoint extends BaseEndpoint
 
     /**
      * List all categories flat
+     * 
+     * Response:
+     * [
+     *   {"id": 1, "name": "Electronics", "parentId": null},
+     *   {"id": 2, "name": "Laptops", "parentId": 1}
+     * ]
      */
     public function listAll(): array
     {
@@ -35,6 +54,14 @@ class ProductCategoriesEndpoint extends BaseEndpoint
 
     /**
      * Get category by ID
+     * 
+     * Response:
+     * {
+     *   "id": 1,
+     *   "name": "Electronics",
+     *   "parentId": null,
+     *   "children": [...]
+     * }
      */
     public function get(int $id, bool $deep = false): array
     {
@@ -48,6 +75,19 @@ class ProductCategoriesEndpoint extends BaseEndpoint
 
     /**
      * Create category
+     * 
+     * Request:
+     * {
+     *   "name": "Electronics",
+     *   "parentId": null
+     * }
+     * 
+     * Response:
+     * {
+     *   "id": 1,
+     *   "name": "Electronics",
+     *   "parentId": null
+     * }
      */
     public function create(array $categoryData): array
     {
@@ -60,6 +100,19 @@ class ProductCategoriesEndpoint extends BaseEndpoint
 
     /**
      * Update category
+     * 
+     * Request:
+     * {
+     *   "name": "Consumer Electronics",
+     *   "parentId": null
+     * }
+     * 
+     * Response:
+     * {
+     *   "id": 1,
+     *   "name": "Consumer Electronics",
+     *   "parentId": null
+     * }
      */
     public function update(int $id, array $categoryData): array
     {

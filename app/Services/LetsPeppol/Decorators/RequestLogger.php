@@ -3,13 +3,15 @@
 namespace App\Services\LetsPeppol\Decorators;
 
 use App\Services\LetsPeppol\Enums\RequestMethod;
-use Illuminate\Support\Facades\Log;
+use App\Services\LetsPeppol\Traits\LogsActivity;
 
 /**
  * Request logger decorator
  */
 class RequestLogger extends ClientDecorator
 {
+    use LogsActivity;
+
     public function request(
         RequestMethod $method,
         string $endpoint,
@@ -19,7 +21,7 @@ class RequestLogger extends ClientDecorator
     ): mixed {
         $startTime = microtime(true);
 
-        Log::info('API Request', [
+        $this->logInfo('API Request', [
             'method' => $method->value,
             'endpoint' => $endpoint,
             'query_params' => $queryParams,
@@ -31,7 +33,7 @@ class RequestLogger extends ClientDecorator
             
             $duration = round((microtime(true) - $startTime) * 1000, 2);
             
-            Log::info('API Response', [
+            $this->logInfo('API Response', [
                 'method' => $method->value,
                 'endpoint' => $endpoint,
                 'duration_ms' => $duration,
@@ -42,7 +44,7 @@ class RequestLogger extends ClientDecorator
         } catch (\Throwable $e) {
             $duration = round((microtime(true) - $startTime) * 1000, 2);
             
-            Log::error('API Request Failed', [
+            $this->logError('API Request Failed', [
                 'method' => $method->value,
                 'endpoint' => $endpoint,
                 'duration_ms' => $duration,

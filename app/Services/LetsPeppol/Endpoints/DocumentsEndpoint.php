@@ -5,12 +5,23 @@ namespace App\Services\LetsPeppol\Endpoints;
 use App\Services\LetsPeppol\Enums\RequestMethod;
 
 /**
- * Documents endpoint client
+ * Documents endpoint client (AppService)
+ * 
+ * Namespace: App
+ * Base URL: /sapi/document
  */
 class DocumentsEndpoint extends BaseEndpoint
 {
     /**
      * Validate UBL XML
+     * 
+     * Request: UBL XML content
+     * 
+     * Response:
+     * {
+     *   "valid": true,
+     *   "errors": []
+     * }
      */
     public function validate(string $ublXml): array
     {
@@ -25,6 +36,24 @@ class DocumentsEndpoint extends BaseEndpoint
 
     /**
      * List documents with filtering and pagination
+     * 
+     * Response:
+     * {
+     *   "content": [
+     *     {
+     *       "id": "uuid",
+     *       "type": "INVOICE",
+     *       "direction": "OUTGOING",
+     *       "draft": false,
+     *       "amount": 100.00,
+     *       "currency": "EUR"
+     *     }
+     *   ],
+     *   "totalElements": 100,
+     *   "totalPages": 5,
+     *   "number": 0,
+     *   "size": 20
+     * }
      */
     public function list(array $filters = [], int $page = 0, int $size = 20, ?string $sort = null): array
     {
@@ -46,7 +75,41 @@ class DocumentsEndpoint extends BaseEndpoint
     }
 
     /**
+     * Loop through all documents with pagination using do...while
+     * 
+     * @param callable $callback Function to call for each page of documents
+     * @param array $filters Optional filters to apply
+     * @param int $size Number of documents per page
+     * @param string|null $sort Optional sort parameter
+     */
+    public function listAll(callable $callback, array $filters = [], int $size = 20, ?string $sort = null): void
+    {
+        $page = 0;
+        
+        do {
+            $response = $this->list($filters, $page, $size, $sort);
+            
+            // Call the callback with the current page of documents
+            $callback($response['content'] ?? []);
+            
+            $page++;
+            $hasMore = !empty($response['content']) && count($response['content']) === $size;
+        } while ($hasMore);
+    }
+
+    /**
      * Get document by ID
+     * 
+     * Response:
+     * {
+     *   "id": "uuid",
+     *   "type": "INVOICE",
+     *   "direction": "OUTGOING",
+     *   "draft": false,
+     *   "amount": 100.00,
+     *   "currency": "EUR",
+     *   "createdAt": "2024-01-01T00:00:00Z"
+     * }
      */
     public function get(string $id): array
     {
@@ -58,6 +121,15 @@ class DocumentsEndpoint extends BaseEndpoint
 
     /**
      * Create document from UBL XML
+     * 
+     * Request: UBL XML content
+     * 
+     * Response:
+     * {
+     *   "id": "uuid",
+     *   "type": "INVOICE",
+     *   "draft": true
+     * }
      */
     public function create(string $ublXml, bool $draft = false, ?string $schedule = null): array
     {
@@ -77,6 +149,15 @@ class DocumentsEndpoint extends BaseEndpoint
 
     /**
      * Update document
+     * 
+     * Request: UBL XML content
+     * 
+     * Response:
+     * {
+     *   "id": "uuid",
+     *   "type": "INVOICE",
+     *   "draft": true
+     * }
      */
     public function update(string $id, string $ublXml, bool $draft = false, ?string $schedule = null): array
     {
@@ -96,6 +177,12 @@ class DocumentsEndpoint extends BaseEndpoint
 
     /**
      * Send document
+     * 
+     * Response:
+     * {
+     *   "id": "uuid",
+     *   "status": "SENT"
+     * }
      */
     public function send(string $id, ?string $schedule = null): array
     {
@@ -114,6 +201,12 @@ class DocumentsEndpoint extends BaseEndpoint
 
     /**
      * Mark document as read
+     * 
+     * Response:
+     * {
+     *   "id": "uuid",
+     *   "read": true
+     * }
      */
     public function markRead(string $id): array
     {
@@ -125,6 +218,12 @@ class DocumentsEndpoint extends BaseEndpoint
 
     /**
      * Mark document as paid
+     * 
+     * Response:
+     * {
+     *   "id": "uuid",
+     *   "paid": true
+     * }
      */
     public function markPaid(string $id): array
     {

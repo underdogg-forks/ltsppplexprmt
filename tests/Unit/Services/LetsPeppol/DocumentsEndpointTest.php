@@ -5,6 +5,7 @@ namespace Tests\Unit\Services\LetsPeppol;
 use App\Services\LetsPeppol\Contracts\ClientInterface;
 use App\Services\LetsPeppol\Endpoints\DocumentsEndpoint;
 use App\Services\LetsPeppol\Enums\RequestMethod;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 class DocumentsEndpointTest extends TestCase
@@ -20,8 +21,10 @@ class DocumentsEndpointTest extends TestCase
         $this->endpoint = new DocumentsEndpoint($this->mockClient);
     }
 
-    public function test_list_calls_client_with_correct_parameters(): void
+    #[Test]
+    public function it_calls_client_with_correct_parameters_when_listing_documents(): void
     {
+        // Arrange
         $filters = ['type' => 'INVOICE'];
         $expectedParams = array_merge($filters, [
             'page' => 0,
@@ -39,13 +42,17 @@ class DocumentsEndpointTest extends TestCase
             )
             ->willReturn(['content' => []]);
 
+        // Act
         $result = $this->endpoint->list($filters);
 
+        // Assert
         $this->assertIsArray($result);
     }
 
-    public function test_get_calls_client_with_document_id(): void
+    #[Test]
+    public function it_retrieves_document_by_id(): void
     {
+        // Arrange
         $documentId = 'test-doc-123';
 
         $this->mockClient
@@ -57,13 +64,17 @@ class DocumentsEndpointTest extends TestCase
             )
             ->willReturn(['id' => $documentId]);
 
+        // Act
         $result = $this->endpoint->get($documentId);
 
+        // Assert
         $this->assertEquals(['id' => $documentId], $result);
     }
 
-    public function test_create_calls_client_with_xml_content(): void
+    #[Test]
+    public function it_creates_document_with_xml_content(): void
     {
+        // Arrange
         $ublXml = '<Invoice>test</Invoice>';
 
         $this->mockClient
@@ -78,14 +89,18 @@ class DocumentsEndpointTest extends TestCase
             )
             ->willReturn(['id' => 'new-doc-123']);
 
+        // Act
         $result = $this->endpoint->create($ublXml);
 
+        // Assert
         $this->assertIsArray($result);
         $this->assertEquals('new-doc-123', $result['id']);
     }
 
-    public function test_delete_calls_client_with_document_id(): void
+    #[Test]
+    public function it_deletes_document_by_id(): void
     {
+        // Arrange
         $documentId = 'test-doc-123';
 
         $this->mockClient
@@ -97,6 +112,37 @@ class DocumentsEndpointTest extends TestCase
             )
             ->willReturn(null);
 
+        // Act
         $this->endpoint->delete($documentId);
+
+        // Assert - if no exception thrown, test passes
+        $this->assertTrue(true);
+    }
+
+    #[Test]
+    public function it_loops_through_all_documents_with_pagination(): void
+    {
+        // Arrange
+        $allDocuments = [];
+        
+        $this->mockClient
+            ->expects($this->exactly(3))
+            ->method('request')
+            ->willReturnOnConsecutiveCalls(
+                ['content' => [['id' => '1'], ['id' => '2']], 'totalElements' => 5],
+                ['content' => [['id' => '3'], ['id' => '4']], 'totalElements' => 5],
+                ['content' => [['id' => '5']], 'totalElements' => 5]
+            );
+
+        // Act
+        $this->endpoint->listAll(function($documents) use (&$allDocuments) {
+            $allDocuments = array_merge($allDocuments, $documents);
+        }, [], 2);
+
+        // Assert
+        $this->assertCount(5, $allDocuments);
+        $this->assertEquals('1', $allDocuments[0]['id']);
+        $this->assertEquals('5', $allDocuments[4]['id']);
     }
 }
+

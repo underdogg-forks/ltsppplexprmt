@@ -4,7 +4,6 @@ namespace App\Services\LetsPeppol;
 
 use App\Services\LetsPeppol\Contracts\ClientInterface;
 use App\Services\LetsPeppol\Enums\RequestMethod;
-use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 
 /**
@@ -27,6 +26,11 @@ class HttpClient implements ClientInterface
         array $queryParams = [],
         array $headers = []
     ): mixed {
+        $url = ltrim($endpoint, '/');
+        
+        if (!empty($queryParams)) {
+            $url .= '?' . http_build_query($queryParams);
+        }
 
         $http = Http::baseUrl($this->baseUrl)
             ->accept('application/json')
@@ -36,48 +40,43 @@ class HttpClient implements ClientInterface
             $http->withToken($this->token);
         }
 
-        foreach ($additionalHeaders as $key => $value) {
-            $http->withHeaders([$key => $value]);
+        if (!empty($headers)) {
+            $http->withHeaders($headers);
         }
-
-        
-        $url = $this->buildUrl($endpoint, $queryParams);
 
         // Check if we're sending XML content
         $isXmlContent = isset($headers['Content-Type']) && $headers['Content-Type'] === 'text/xml';
 
         $response = match ($method) {
-            RequestMethod::GET => $http->get($url),
+            RequestMethod::GET => $http->get($url)->throw(),
             RequestMethod::POST => $isXmlContent 
-                ? $http->withBody($data['body'] ?? '', 'text/xml')->post($url)
-                : $http->post($url, $data),
+                ? $http->withBody($data['body'] ?? '', 'text/xml')->post($url)->throw()
+                : $http->post($url, $data)->throw(),
             RequestMethod::PUT => $isXmlContent 
-                ? $http->withBody($data['body'] ?? '', 'text/xml')->put($url)
-                : $http->put($url, $data),
-            RequestMethod::DELETE => $http->delete($url, $data),
-            RequestMethod::PATCH => $http->patch($url, $data),
+                ? $http->withBody($data['body'] ?? '', 'text/xml')->put($url)->throw()
+                : $http->put($url, $data)->throw(),
+            RequestMethod::DELETE => $http->delete($url, $data)->throw(),
+            RequestMethod::PATCH => $http->patch($url, $data)->throw(),
         };
 
-        if ($response->successful()) {
-            $contentType = $response->header('Content-Type');
-        }
+        $contentType = $response->header('Content-Type');
             
         // Return raw body for non-JSON responses
         if ($contentType && !str_contains($contentType, 'application/json')) {
-                return $response->body();
+            return $response->body();
         }
 
         return $response->json();
     }
 
-    protected function buildUrl(string $endpoint, array $queryParams = []): string
+    public function setToken(string $token): static
     {
-        $url = ltrim($endpoint, '/');
-        
-        if (!empty($queryParams)) {
-            $url .= '?' . http_build_query($queryParams);
-        }
+        $this->token = $token;
+        return $this;
+    }
 
-        return $url;
+    public function getToken(): ?string
+    {
+        return $this->token;
     }
 }
