@@ -1,16 +1,34 @@
 <?php
 
-namespace App\Services\LetsPeppol\Endpoints;
+namespace App\Services\LetsPeppol\Endpoints\Proxy;
 
+use App\Services\LetsPeppol\Endpoints\BaseEndpoint;
 use App\Services\LetsPeppol\Enums\RequestMethod;
 
 /**
- * Proxy Documents endpoint client
+ * Proxy Documents endpoint client (ProxyService)
+ * 
+ * Namespace: Proxy
+ * Base URL: /sapi/document
  */
-class ProxyDocumentsEndpoint extends BaseEndpoint
+class DocumentsEndpoint extends BaseEndpoint
 {
     /**
      * Get all new documents
+     * 
+     * Response:
+     * [
+     *   {
+     *     "id": "uuid",
+     *     "documentType": "INVOICE",
+     *     "direction": "INCOMING",
+     *     "counterPartyName": "Supplier Company",
+     *     "counterPartyId": "0208:BE0987654321",
+     *     "amount": 100.00,
+     *     "currency": "EUR",
+     *     "receivedAt": "2024-01-01T00:00:00Z"
+     *   }
+     * ]
      */
     public function getAllNew(int $size = 100): array
     {
@@ -24,6 +42,23 @@ class ProxyDocumentsEndpoint extends BaseEndpoint
 
     /**
      * Get status updates for specific documents
+     * 
+     * Request:
+     * ["uuid-1", "uuid-2", "uuid-3"]
+     * 
+     * Response:
+     * [
+     *   {
+     *     "id": "uuid-1",
+     *     "status": "DELIVERED",
+     *     "updatedAt": "2024-01-01T00:00:00Z"
+     *   },
+     *   {
+     *     "id": "uuid-2",
+     *     "status": "FAILED",
+     *     "error": "Recipient not found"
+     *   }
+     * ]
      */
     public function getStatusUpdates(array $documentIds): array
     {
@@ -36,6 +71,16 @@ class ProxyDocumentsEndpoint extends BaseEndpoint
 
     /**
      * Get document by ID
+     * 
+     * Response:
+     * {
+     *   "id": "uuid",
+     *   "documentType": "INVOICE",
+     *   "direction": "INCOMING",
+     *   "counterPartyName": "Supplier Company",
+     *   "ublXml": "<Invoice>...</Invoice>",
+     *   "metadata": {...}
+     * }
      */
     public function get(string $id): array
     {
@@ -47,6 +92,20 @@ class ProxyDocumentsEndpoint extends BaseEndpoint
 
     /**
      * Create document to send
+     * 
+     * Request:
+     * {
+     *   "recipientId": "0208:BE0987654321",
+     *   "documentType": "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2",
+     *   "ublXml": "<Invoice>...</Invoice>"
+     * }
+     * 
+     * Response:
+     * {
+     *   "id": "uuid",
+     *   "status": "QUEUED",
+     *   "createdAt": "2024-01-01T00:00:00Z"
+     * }
      */
     public function create(array $documentData, bool $noArchive = false): array
     {
@@ -60,6 +119,18 @@ class ProxyDocumentsEndpoint extends BaseEndpoint
 
     /**
      * Update document
+     * 
+     * Request:
+     * {
+     *   "ublXml": "<Invoice>...</Invoice>"
+     * }
+     * 
+     * Response:
+     * {
+     *   "id": "uuid",
+     *   "status": "UPDATED",
+     *   "updatedAt": "2024-01-01T00:00:00Z"
+     * }
      */
     public function update(string $id, array $documentData, bool $noArchive = false): array
     {
@@ -73,6 +144,18 @@ class ProxyDocumentsEndpoint extends BaseEndpoint
 
     /**
      * Reschedule document sending
+     * 
+     * Request:
+     * {
+     *   "scheduledAt": "2024-01-02T00:00:00Z"
+     * }
+     * 
+     * Response:
+     * {
+     *   "id": "uuid",
+     *   "status": "RESCHEDULED",
+     *   "scheduledAt": "2024-01-02T00:00:00Z"
+     * }
      */
     public function reschedule(string $id, array $documentData): array
     {
@@ -85,6 +168,8 @@ class ProxyDocumentsEndpoint extends BaseEndpoint
 
     /**
      * Mark document as downloaded
+     * 
+     * Response: No content (204)
      */
     public function markDownloaded(string $id, bool $noArchive = false): void
     {
@@ -98,6 +183,11 @@ class ProxyDocumentsEndpoint extends BaseEndpoint
 
     /**
      * Mark multiple documents as downloaded
+     * 
+     * Request:
+     * ["uuid-1", "uuid-2", "uuid-3"]
+     * 
+     * Response: No content (204)
      */
     public function markDownloadedBatch(array $documentIds, bool $noArchive = false): void
     {
@@ -111,6 +201,8 @@ class ProxyDocumentsEndpoint extends BaseEndpoint
 
     /**
      * Cancel/delete document
+     * 
+     * Response: No content (204)
      */
     public function delete(string $id, bool $noArchive = false): void
     {

@@ -1,16 +1,25 @@
 <?php
 
-namespace App\Services\LetsPeppol\Endpoints;
+namespace App\Services\LetsPeppol\Endpoints\Kyc;
 
+use App\Services\LetsPeppol\Endpoints\BaseEndpoint;
 use App\Services\LetsPeppol\Enums\RequestMethod;
 
 /**
- * Authentication endpoint client
+ * Authentication endpoint client (KycService)
+ * 
+ * Namespace: Kyc
+ * Base URL: /api/jwt/auth, /sapi/company
  */
 class AuthenticationEndpoint extends BaseEndpoint
 {
     /**
      * Authenticate and get JWT token
+     * 
+     * Request: Basic authentication (email:password encoded in base64)
+     * 
+     * Response:
+     * "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
      */
     public function authenticate(string $email, string $password): string
     {
@@ -30,6 +39,15 @@ class AuthenticationEndpoint extends BaseEndpoint
 
     /**
      * Get account information (requires JWT token)
+     * 
+     * Response:
+     * {
+     *   "peppolId": "0208:BE0123456789",
+     *   "name": "Company Name BVBA",
+     *   "vatNumber": "BE0123456789",
+     *   "email": "info@company.com",
+     *   "registered": true
+     * }
      */
     public function getAccountInfo(): array
     {
@@ -41,6 +59,16 @@ class AuthenticationEndpoint extends BaseEndpoint
 
     /**
      * Search companies
+     * 
+     * Response:
+     * [
+     *   {
+     *     "peppolId": "0208:BE0123456789",
+     *     "name": "Company Name BVBA",
+     *     "vatNumber": "BE0123456789",
+     *     "country": "BE"
+     *   }
+     * ]
      */
     public function searchCompanies(?string $vatNumber = null, ?string $peppolId = null, ?string $companyName = null): array
     {
@@ -60,6 +88,16 @@ class AuthenticationEndpoint extends BaseEndpoint
 
     /**
      * Register on Peppol Directory
+     * 
+     * Response:
+     * {
+     *   "token": "new-jwt-token",
+     *   "status": "updated"
+     * }
+     * or
+     * {
+     *   "status": "already_registered"
+     * }
      */
     public function registerPeppol(): array
     {
@@ -78,6 +116,16 @@ class AuthenticationEndpoint extends BaseEndpoint
 
     /**
      * Unregister from Peppol Directory
+     * 
+     * Response:
+     * {
+     *   "token": "new-jwt-token",
+     *   "status": "updated"
+     * }
+     * or
+     * {
+     *   "status": "already_unregistered"
+     * }
      */
     public function unregisterPeppol(): array
     {
@@ -96,6 +144,8 @@ class AuthenticationEndpoint extends BaseEndpoint
 
     /**
      * Download signed contract
+     * 
+     * Response: PDF binary content
      */
     public function getSignedContract(): string
     {

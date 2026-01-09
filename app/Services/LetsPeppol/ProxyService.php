@@ -5,9 +5,9 @@ namespace App\Services\LetsPeppol;
 use App\Services\LetsPeppol\Contracts\ClientInterface;
 use App\Services\LetsPeppol\Decorators\HttpExceptionHandler;
 use App\Services\LetsPeppol\Decorators\RequestLogger;
-use App\Services\LetsPeppol\Endpoints\MonitorEndpoint;
-use App\Services\LetsPeppol\Endpoints\ProxyDocumentsEndpoint;
-use App\Services\LetsPeppol\Endpoints\RegistryEndpoint;
+use App\Services\LetsPeppol\Endpoints\Proxy\DocumentsEndpoint;
+use App\Services\LetsPeppol\Endpoints\Proxy\MonitorEndpoint;
+use App\Services\LetsPeppol\Endpoints\Proxy\RegistryEndpoint;
 
 /**
  * Proxy API Service Client
@@ -17,7 +17,7 @@ use App\Services\LetsPeppol\Endpoints\RegistryEndpoint;
 class ProxyService
 {
     protected ClientInterface $client;
-    protected ProxyDocumentsEndpoint $documents;
+    protected DocumentsEndpoint $documents;
     protected RegistryEndpoint $registry;
     protected MonitorEndpoint $monitor;
 
@@ -33,7 +33,7 @@ class ProxyService
         );
 
         // Initialize endpoint clients
-        $this->documents = new ProxyDocumentsEndpoint($this->client);
+        $this->documents = new DocumentsEndpoint($this->client);
         $this->registry = new RegistryEndpoint($this->client);
         $this->monitor = new MonitorEndpoint($this->client);
     }
@@ -41,7 +41,7 @@ class ProxyService
     /**
      * Get documents endpoint
      */
-    public function documents(): ProxyDocumentsEndpoint
+    public function documents(): DocumentsEndpoint
     {
         return $this->documents;
     }

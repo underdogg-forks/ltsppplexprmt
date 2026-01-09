@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Services\LetsPeppol\Endpoints;
+namespace App\Services\LetsPeppol\Endpoints\App;
 
 use App\Services\LetsPeppol\Enums\RequestMethod;
 
 /**
  * Statistics endpoint client
  */
-class StatisticsEndpoint extends BaseEndpoint
+class StatisticsEndpoint extends ..\BaseEndpoint
 {
     /**
      * Get donation statistics

@@ -5,13 +5,13 @@ namespace App\Services\LetsPeppol;
 use App\Services\LetsPeppol\Contracts\ClientInterface;
 use App\Services\LetsPeppol\Decorators\HttpExceptionHandler;
 use App\Services\LetsPeppol\Decorators\RequestLogger;
-use App\Services\LetsPeppol\Endpoints\CompanyEndpoint;
-use App\Services\LetsPeppol\Endpoints\DocumentsEndpoint;
-use App\Services\LetsPeppol\Endpoints\PartnersEndpoint;
-use App\Services\LetsPeppol\Endpoints\PeppolDirectoryEndpoint;
-use App\Services\LetsPeppol\Endpoints\ProductCategoriesEndpoint;
-use App\Services\LetsPeppol\Endpoints\ProductsEndpoint;
-use App\Services\LetsPeppol\Endpoints\StatisticsEndpoint;
+use App\Services\LetsPeppol\Endpoints\App\CompanyEndpoint;
+use App\Services\LetsPeppol\Endpoints\App\DocumentsEndpoint;
+use App\Services\LetsPeppol\Endpoints\App\PartnersEndpoint;
+use App\Services\LetsPeppol\Endpoints\App\PeppolDirectoryEndpoint;
+use App\Services\LetsPeppol\Endpoints\App\ProductCategoriesEndpoint;
+use App\Services\LetsPeppol\Endpoints\App\ProductsEndpoint;
+use App\Services\LetsPeppol\Endpoints\App\StatisticsEndpoint;
 
 /**
  * App API Service Client

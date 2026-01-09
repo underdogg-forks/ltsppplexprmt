@@ -5,9 +5,9 @@ namespace App\Services\LetsPeppol;
 use App\Services\LetsPeppol\Contracts\ClientInterface;
 use App\Services\LetsPeppol\Decorators\HttpExceptionHandler;
 use App\Services\LetsPeppol\Decorators\RequestLogger;
-use App\Services\LetsPeppol\Endpoints\AuthenticationEndpoint;
-use App\Services\LetsPeppol\Endpoints\PasswordEndpoint;
-use App\Services\LetsPeppol\Endpoints\RegistrationEndpoint;
+use App\Services\LetsPeppol\Endpoints\Kyc\AuthenticationEndpoint;
+use App\Services\LetsPeppol\Endpoints\Kyc\PasswordEndpoint;
+use App\Services\LetsPeppol\Endpoints\Kyc\RegistrationEndpoint;
 
 /**
  * KYC API Service Client

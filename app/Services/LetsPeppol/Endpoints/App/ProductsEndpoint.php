@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Services\LetsPeppol\Endpoints;
+namespace App\Services\LetsPeppol\Endpoints\App;
 
 use App\Services\LetsPeppol\Enums\RequestMethod;
 
 /**
  * Products endpoint client
  */
-class ProductsEndpoint extends BaseEndpoint
+class ProductsEndpoint extends ..\BaseEndpoint
 {
     /**
      * List products

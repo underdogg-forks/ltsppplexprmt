@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services\LetsPeppol\Endpoints;
+namespace App\Services\LetsPeppol\Endpoints\App;
 
 use App\Services\LetsPeppol\Enums\RequestMethod;
 
@@ -10,7 +10,7 @@ use App\Services\LetsPeppol\Enums\RequestMethod;
  * Namespace: App
  * Base URL: /sapi/document
  */
-class DocumentsEndpoint extends BaseEndpoint
+class DocumentsEndpoint extends ..\BaseEndpoint
 {
     /**
      * Validate UBL XML
