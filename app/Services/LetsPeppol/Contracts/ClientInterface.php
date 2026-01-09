@@ -16,14 +16,4 @@ interface ClientInterface
         array $queryParams = [],
         array $headers = []
     ): mixed;
-
-    /**
-     * Set the JWT authentication token
-     */
-    public function setToken(string $token): static;
-
-    /**
-     * Get the JWT authentication token
-     */
-    public function getToken(): ?string;
 }
