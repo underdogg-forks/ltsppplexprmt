@@ -31,8 +31,23 @@ Each API endpoint should have its own dedicated client class extending `BaseEndp
 
 **DO:**
 ```php
+/**
+ * Documents endpoint client (AppService)
+ * 
+ * Namespace: App
+ * Base URL: /sapi/document
+ */
 class DocumentsEndpoint extends BaseEndpoint
 {
+    /**
+     * List documents
+     * 
+     * Response:
+     * {
+     *   "content": [...],
+     *   "totalElements": 100
+     * }
+     */
     public function list(array $filters = []): array
     {
         return $this->request(
@@ -92,6 +107,148 @@ $client->proxy()->registry()->get();
 $client->listDocuments(); // Flat API
 ```
 
+### Namespace Documentation
+
+Always document which service (KYC/App/Proxy) an endpoint belongs to:
+
+**DO:**
+```php
+/**
+ * Company endpoint client (AppService)
+ * 
+ * Namespace: App
+ * Base URL: /sapi/company
+ */
+class CompanyEndpoint extends BaseEndpoint
+```
+
+**DON'T:**
+```php
+/**
+ * Company endpoint client
+ */
+class CompanyEndpoint extends BaseEndpoint
+```
+
+### JSON Structure Documentation
+
+Document the JSON request/response structures for all methods:
+
+**DO:**
+```php
+/**
+ * Get company information
+ * 
+ * Response:
+ * {
+ *   "peppolId": "0208:BE0123456789",
+ *   "name": "Company Name",
+ *   "vatNumber": "BE0123456789",
+ *   "email": "info@company.com"
+ * }
+ */
+public function get(): array
+{
+    return $this->request(RequestMethod::GET, '/sapi/company');
+}
+
+/**
+ * Create partner
+ * 
+ * Request:
+ * {
+ *   "peppolId": "0208:BE0987654321",
+ *   "name": "Partner Company",
+ *   "vatNumber": "BE0987654321"
+ * }
+ * 
+ * Response:
+ * {
+ *   "id": 1,
+ *   "peppolId": "0208:BE0987654321",
+ *   "name": "Partner Company"
+ * }
+ */
+public function create(array $partnerData): array
+{
+    return $this->request(RequestMethod::POST, '/sapi/partner', $partnerData);
+}
+```
+
+**DON'T:**
+```php
+/**
+ * Get company information
+ */
+public function get(): array
+{
+    return $this->request(RequestMethod::GET, '/sapi/company');
+}
+```
+
+### Pagination Helper
+
+For paginated endpoints, provide a `listAll()` helper using do...while:
+
+**DO:**
+```php
+/**
+ * Loop through all documents with pagination
+ */
+public function listAll(callable $callback, array $filters = [], int $size = 20): void
+{
+    $page = 0;
+    
+    do {
+        $response = $this->list($filters, $page, $size);
+        $callback($response['content'] ?? []);
+        $page++;
+        $hasMore = !empty($response['content']) && count($response['content']) === $size;
+    } while ($hasMore);
+}
+```
+
+**DON'T:**
+```php
+// Don't force users to implement pagination themselves
+```
+
+### LogsActivity Trait
+
+Use the `LogsActivity` trait for all logging instead of direct `Log` facade calls:
+
+**DO:**
+```php
+use App\Services\LetsPeppol\Traits\LogsActivity;
+
+class RequestLogger extends ClientDecorator
+{
+    use LogsActivity;
+    
+    public function request(...): mixed
+    {
+        $this->logInfo('API Request', ['endpoint' => $endpoint]);
+        // ...
+        $this->logError('API Request Failed', ['error' => $e->getMessage()]);
+    }
+}
+```
+
+**DON'T:**
+```php
+use Illuminate\Support\Facades\Log;
+
+class RequestLogger extends ClientDecorator
+{
+    public function request(...): mixed
+    {
+        Log::info('API Request', ['endpoint' => $endpoint]);
+        // ...
+        Log::error('API Request Failed', ['error' => $e->getMessage()]);
+    }
+}
+```
+
 ### Exception Handling
 
 Use domain-specific exceptions:
@@ -139,27 +296,79 @@ interface ClientInterface
 }
 ```
 
-### Logging Standards
+### HttpClient Simplification
 
-The `RequestLogger` decorator handles all logging automatically. Do not add manual logging in endpoint methods.
+The `HttpClient` should use `->throw()` for automatic exception handling:
 
 **DO:**
 ```php
-// Let the decorator handle logging
-public function list(): array
+$response = match ($method) {
+    RequestMethod::GET => $http->get($url)->throw(),
+    RequestMethod::POST => $http->post($url, $data)->throw(),
+    // ...
+};
+```
+
+**DON'T:**
+```php
+$response = match ($method) {
+    RequestMethod::GET => $http->get($url),
+    RequestMethod::POST => $http->post($url, $data),
+};
+
+if (!$response->successful()) {
+    throw new \RuntimeException(...);
+}
+```
+
+### Testing Standards
+
+All test methods must follow these conventions:
+
+1. **Naming**: Start with `it_` and make grammatical sense
+2. **Annotation**: Use `#[Test]` attribute instead of `test` prefix
+3. **Structure**: Follow "Arrange, Act, Assert" pattern
+
+**DO:**
+```php
+use PHPUnit\Framework\Attributes\Test;
+
+class DocumentsEndpointTest extends TestCase
 {
-    return $this->request(RequestMethod::GET, '/api/endpoint');
+    #[Test]
+    public function it_retrieves_document_by_id(): void
+    {
+        // Arrange
+        $documentId = 'test-doc-123';
+        $mockClient = $this->createMock(ClientInterface::class);
+        $mockClient->expects($this->once())
+            ->method('request')
+            ->willReturn(['id' => $documentId]);
+
+        // Act
+        $endpoint = new DocumentsEndpoint($mockClient);
+        $result = $endpoint->get($documentId);
+
+        // Assert
+        $this->assertEquals($documentId, $result['id']);
+    }
 }
 ```
 
 **DON'T:**
 ```php
-public function list(): array
+class DocumentsEndpointTest extends TestCase
 {
-    Log::info('Calling list endpoint');
-    $result = $this->request(RequestMethod::GET, '/api/endpoint');
-    Log::info('Got result', $result);
-    return $result;
+    public function test_get_document(): void
+    {
+        $mockClient = $this->createMock(ClientInterface::class);
+        $mockClient->expects($this->once())
+            ->method('request')
+            ->willReturn(['id' => 'test-doc-123']);
+        $endpoint = new DocumentsEndpoint($mockClient);
+        $result = $endpoint->get('test-doc-123');
+        $this->assertEquals('test-doc-123', $result['id']);
+    }
 }
 ```
 
@@ -187,21 +396,26 @@ public function test_endpoint_list(): void
 When adding a new endpoint:
 
 1. Create `Endpoints/NewEndpoint.php` extending `BaseEndpoint`
-2. Add methods using `$this->request()`
-3. Register in appropriate service (KycService, ProxyService, or AppService)
-4. Update the example usage file
-5. Write tests
+2. Add namespace documentation (KYC/App/Proxy)
+3. Document JSON structures for all methods
+4. Add methods using `$this->request()` with `RequestMethod` enum
+5. Add pagination helper if applicable
+6. Register in appropriate service (KycService, ProxyService, or AppService)
+7. Update the example usage file
+8. Write tests using `it_` naming and `#[Test]` attribute
 
 ### Service Provider Pattern
 
-Use `bind()` instead of `singleton()` for better testability:
+Create a `LetsPeppolServiceProvider` that binds the interface:
 
 **DO:**
 ```php
 $this->app->bind(ClientInterface::class, function ($app) {
+    $baseUrl = config('services.letspeppol.app_url');
+    
     return new RequestLogger(
         new HttpExceptionHandler(
-            new HttpClient(config('services.letspeppol.app_url'))
+            new HttpClient($baseUrl)
         )
     );
 });
@@ -244,9 +458,14 @@ The HttpClient will automatically use `withBody()` when Content-Type is text/xml
 ## Checklist for New Endpoints
 
 - [ ] Create endpoint class extending `BaseEndpoint`
+- [ ] Add namespace documentation (KYC/App/Proxy)
+- [ ] Document JSON structures for requests/responses
 - [ ] Use `RequestMethod` enum for HTTP methods
 - [ ] Use `$this->request()` for all API calls
+- [ ] Add pagination helper if applicable
+- [ ] Use `LogsActivity` trait if logging needed
 - [ ] Add to appropriate service class
 - [ ] Update example usage file
-- [ ] Write unit tests
+- [ ] Write unit tests with `it_` naming and `#[Test]`
+- [ ] Follow "Arrange, Act, Assert" pattern in tests
 - [ ] Update documentation

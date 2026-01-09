@@ -14,9 +14,9 @@ The API client uses a decorator chain for cross-cutting concerns:
 RequestLogger → HttpExceptionHandler → HttpClient
 ```
 
-- **RequestLogger**: Logs all API requests and responses with timing information
+- **RequestLogger**: Logs all API requests and responses with timing information using the `LogsActivity` trait
 - **HttpExceptionHandler**: Converts HTTP errors into domain-specific exceptions
-- **HttpClient**: Base HTTP client that makes actual API calls
+- **HttpClient**: Base HTTP client that makes actual API calls with `->throw()` for automatic exception handling
 
 ### 2. Service-Oriented Architecture
 
@@ -34,20 +34,24 @@ Instead of monolithic client classes, each API endpoint has its own dedicated cl
 
 ```
 app/Services/LetsPeppol/Endpoints/
-├── AuthenticationEndpoint.php
-├── CompanyEndpoint.php
-├── DocumentsEndpoint.php
-├── PartnersEndpoint.php
-├── PasswordEndpoint.php
-├── PeppolDirectoryEndpoint.php
-├── ProductCategoriesEndpoint.php
-├── ProductsEndpoint.php
-├── ProxyDocumentsEndpoint.php
-├── RegistrationEndpoint.php
-├── RegistryEndpoint.php
-├── StatisticsEndpoint.php
-└── MonitorEndpoint.php
+├── AuthenticationEndpoint.php (KycService)
+├── CompanyEndpoint.php (AppService)
+├── DocumentsEndpoint.php (AppService)
+├── PartnersEndpoint.php (AppService)
+├── PasswordEndpoint.php (KycService)
+├── PeppolDirectoryEndpoint.php (AppService)
+├── ProductCategoriesEndpoint.php (AppService)
+├── ProductsEndpoint.php (AppService)
+├── ProxyDocumentsEndpoint.php (ProxyService)
+├── RegistrationEndpoint.php (KycService)
+├── RegistryEndpoint.php (ProxyService)
+├── StatisticsEndpoint.php (AppService)
+└── MonitorEndpoint.php (ProxyService)
 ```
+
+Each endpoint client includes:
+- Namespace documentation (KYC/App/Proxy) in the class docblock
+- JSON request/response structure documentation for each method
 
 ### 4. Interface Segregation
 
@@ -69,6 +73,31 @@ interface ClientInterface
 }
 ```
 
+### 5. LogsActivity Trait
+
+All classes that need logging should use the `LogsActivity` trait:
+
+```php
+use App\Services\LetsPeppol\Traits\LogsActivity;
+
+class RequestLogger extends ClientDecorator
+{
+    use LogsActivity;
+    
+    public function someMethod(): void
+    {
+        $this->logInfo('Processing request', ['endpoint' => '/api/test']);
+        $this->logError('Request failed', ['error' => $e->getMessage()]);
+        $this->logWarning('Slow response', ['duration' => 5000]);
+    }
+}
+```
+
+Benefits:
+- Automatic class context in log messages
+- Consistent logging format across all components
+- No direct `Log` facade calls
+
 ## Usage Examples
 
 ### Basic Authentication
@@ -86,6 +115,13 @@ $token = $client->authenticate('user@example.com', 'password');
 $documents = $client->app()->documents()->list();
 $document = $client->app()->documents()->get($id);
 $client->app()->documents()->create($ublXml);
+
+// Paginate through all documents
+$client->app()->documents()->listAll(function($documents) {
+    foreach ($documents as $doc) {
+        // Process each document
+    }
+}, ['type' => 'INVOICE'], 50);
 
 // Partners
 $partners = $client->app()->partners()->list();
@@ -133,33 +169,75 @@ enum RequestMethod: string
 
 ## Logging
 
-The `RequestLogger` decorator automatically logs:
+The `RequestLogger` decorator automatically logs using the `LogsActivity` trait:
 - Request method, endpoint, and query parameters
 - Response success/failure status
 - Request duration in milliseconds
 - Error messages for failed requests
+- Automatic class context (e.g., "[RequestLogger] API Request")
 
-All logs use Laravel's standard logging facade.
+All logs use Laravel's standard logging facade through the trait.
 
 ## Testing
 
-The architecture is designed for testability:
+The architecture is designed for testability following these conventions:
+
+### Test Naming Convention
+
+- All test methods start with `it_` and make grammatical sense
+- Use `#[Test]` PHP 8 attribute instead of `test` prefix
+- Follow "Arrange, Act, Assert" pattern
+
+Example:
+
+```php
+use PHPUnit\Framework\Attributes\Test;
+
+class DocumentsEndpointTest extends TestCase
+{
+    #[Test]
+    public function it_retrieves_document_by_id(): void
+    {
+        // Arrange
+        $documentId = 'test-doc-123';
+        $mockClient = $this->createMock(ClientInterface::class);
+        $mockClient->expects($this->once())
+            ->method('request')
+            ->willReturn(['id' => $documentId]);
+
+        // Act
+        $endpoint = new DocumentsEndpoint($mockClient);
+        $result = $endpoint->get($documentId);
+
+        // Assert
+        $this->assertEquals($documentId, $result['id']);
+    }
+}
+```
+
+### Testing Approaches
 
 1. **Mock the ClientInterface**: Replace the HTTP client with a test double
 2. **Test Endpoints in Isolation**: Each endpoint can be tested independently
 3. **Test Decorators**: Decorators can be tested with mock clients
 
-Example:
+## Pagination Helper
+
+For endpoints with pagination, use the `listAll()` helper with a do...while loop:
 
 ```php
-// Create a mock client
-$mockClient = Mockery::mock(ClientInterface::class);
-$mockClient->shouldReceive('request')
-    ->andReturn(['data' => 'test']);
-
-// Test an endpoint
-$endpoint = new DocumentsEndpoint($mockClient);
-$result = $endpoint->list();
+// In endpoint class
+public function listAll(callable $callback, array $filters = [], int $size = 20, ?string $sort = null): void
+{
+    $page = 0;
+    
+    do {
+        $response = $this->list($filters, $page, $size, $sort);
+        $callback($response['content'] ?? []);
+        $page++;
+        $hasMore = !empty($response['content']) && count($response['content']) === $size;
+    } while ($hasMore);
+}
 ```
 
 ## Adding New Endpoints
@@ -167,15 +245,33 @@ $result = $endpoint->list();
 To add a new endpoint:
 
 1. Create a new class extending `BaseEndpoint`
-2. Add methods for each API operation
-3. Use `$this->request()` to make HTTP calls
-4. Register the endpoint in the appropriate service
+2. Add namespace documentation in class docblock (KYC/App/Proxy)
+3. Document JSON structures for each method
+4. Add methods using `$this->request()` with `RequestMethod` enum
+5. Register the endpoint in the appropriate service
 
 Example:
 
 ```php
+/**
+ * New endpoint client (AppService)
+ * 
+ * Namespace: App
+ * Base URL: /sapi/new-endpoint
+ */
 class NewEndpoint extends BaseEndpoint
 {
+    /**
+     * List items
+     * 
+     * Response:
+     * [
+     *   {
+     *     "id": 1,
+     *     "name": "Item 1"
+     *   }
+     * ]
+     */
     public function list(): array
     {
         return $this->request(
@@ -184,6 +280,20 @@ class NewEndpoint extends BaseEndpoint
         );
     }
 
+    /**
+     * Create item
+     * 
+     * Request:
+     * {
+     *   "name": "New Item"
+     * }
+     * 
+     * Response:
+     * {
+     *   "id": 1,
+     *   "name": "New Item"
+     * }
+     */
     public function create(array $data): array
     {
         return $this->request(
@@ -215,16 +325,27 @@ Services use configuration from `config/services.php`:
 ],
 ```
 
-## Service Provider Bindings
+## Service Provider
 
-For better testability, use `bind()` instead of `singleton()`:
+The `LetsPeppolServiceProvider` binds the `ClientInterface` with the decorator chain:
 
 ```php
 $this->app->bind(ClientInterface::class, function ($app) {
+    $baseUrl = config('services.letspeppol.app_url');
+    
     return new RequestLogger(
         new HttpExceptionHandler(
-            new HttpClient(config('services.letspeppol.app_url'))
+            new HttpClient($baseUrl)
         )
     );
 });
+```
+
+Register the provider in `config/app.php`:
+
+```php
+'providers' => [
+    // ...
+    App\Providers\LetsPeppolServiceProvider::class,
+],
 ```
