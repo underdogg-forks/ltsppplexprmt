@@ -2,6 +2,7 @@
 
 namespace App\Services\LetsPeppol\Endpoints\App;
 
+use App\Services\LetsPeppol\Endpoints\BaseEndpoint;
 use App\Services\LetsPeppol\Enums\RequestMethod;
 
 /**

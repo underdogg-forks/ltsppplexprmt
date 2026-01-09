@@ -16,4 +16,14 @@ interface ClientInterface
         array $queryParams = [],
         array $headers = []
     ): mixed;
+
+    /**
+     * Set the authentication token
+     */
+    public function setToken(string $token): static;
+
+    /**
+     * Get the current authentication token
+     */
+    public function getToken(): ?string;
 }

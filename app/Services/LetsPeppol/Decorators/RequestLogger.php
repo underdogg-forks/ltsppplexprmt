@@ -21,10 +21,13 @@ class RequestLogger extends ClientDecorator
     ): mixed {
         $startTime = microtime(true);
 
+        // Filter out sensitive query parameters before logging
+        $safeQueryParams = $this->filterSensitiveParams($queryParams);
+
         $this->logInfo('API Request', [
             'method' => $method->value,
             'endpoint' => $endpoint,
-            'query_params' => $queryParams,
+            'query_params' => $safeQueryParams,
             'has_data' => !empty($data),
         ]);
 
@@ -53,5 +56,21 @@ class RequestLogger extends ClientDecorator
 
             throw $e;
         }
+    }
+
+    /**
+     * Filter out sensitive query parameters from logs
+     */
+    private function filterSensitiveParams(array $params): array
+    {
+        $sensitiveKeys = ['token', 'authorization', 'password', 'secret', 'api_key', 'apikey'];
+        
+        return array_map(function ($value) use ($sensitiveKeys, $params) {
+            $key = array_search($value, $params, true);
+            if ($key !== false && in_array(strtolower($key), $sensitiveKeys)) {
+                return '[REDACTED]';
+            }
+            return $value;
+        }, $params);
     }
 }
