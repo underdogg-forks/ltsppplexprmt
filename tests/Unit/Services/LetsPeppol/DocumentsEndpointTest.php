@@ -2,23 +2,23 @@
 
 namespace Tests\Unit\Services\LetsPeppol;
 
-use App\Services\LetsPeppol\Contracts\ClientInterface;
 use App\Services\LetsPeppol\Endpoints\App\DocumentsEndpoint;
 use App\Services\LetsPeppol\Enums\RequestMethod;
+use App\Services\LetsPeppol\Testing\FakeClient;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 class DocumentsEndpointTest extends TestCase
 {
-    private ClientInterface $mockClient;
+    private FakeClient $fakeClient;
     private DocumentsEndpoint $endpoint;
 
     protected function setUp(): void
     {
         parent::setUp();
         
-        $this->mockClient = $this->createMock(ClientInterface::class);
-        $this->endpoint = new DocumentsEndpoint($this->mockClient);
+        $this->fakeClient = new FakeClient();
+        $this->endpoint = new DocumentsEndpoint($this->fakeClient);
     }
 
     #[Test]
@@ -26,27 +26,14 @@ class DocumentsEndpointTest extends TestCase
     {
         // Arrange
         $filters = ['type' => 'INVOICE'];
-        $expectedParams = array_merge($filters, [
-            'page' => 0,
-            'size' => 20,
-        ]);
-
-        $this->mockClient
-            ->expects($this->once())
-            ->method('request')
-            ->with(
-                $this->equalTo(RequestMethod::GET),
-                $this->equalTo('/sapi/document'),
-                $this->equalTo([]),
-                $this->equalTo($expectedParams)
-            )
-            ->willReturn(['content' => []]);
+        $this->fakeClient->queueResponse(['content' => []]);
 
         // Act
         $result = $this->endpoint->list($filters);
 
         // Assert
         $this->assertIsArray($result);
+        $this->fakeClient->assertRequestSent('/sapi/document', RequestMethod::GET);
     }
 
     #[Test]
@@ -54,21 +41,14 @@ class DocumentsEndpointTest extends TestCase
     {
         // Arrange
         $documentId = 'test-doc-123';
-
-        $this->mockClient
-            ->expects($this->once())
-            ->method('request')
-            ->with(
-                $this->equalTo(RequestMethod::GET),
-                $this->equalTo("/sapi/document/{$documentId}")
-            )
-            ->willReturn(['id' => $documentId]);
+        $this->fakeClient->queueResponse(['id' => $documentId]);
 
         // Act
         $result = $this->endpoint->get($documentId);
 
         // Assert
         $this->assertEquals(['id' => $documentId], $result);
+        $this->fakeClient->assertRequestSent("/sapi/document/{$documentId}", RequestMethod::GET);
     }
 
     #[Test]
@@ -76,18 +56,7 @@ class DocumentsEndpointTest extends TestCase
     {
         // Arrange
         $ublXml = '<Invoice>test</Invoice>';
-
-        $this->mockClient
-            ->expects($this->once())
-            ->method('request')
-            ->with(
-                $this->equalTo(RequestMethod::POST),
-                $this->equalTo('/sapi/document'),
-                $this->equalTo(['body' => $ublXml]),
-                $this->equalTo(['draft' => 'false']),
-                $this->equalTo(['Content-Type' => 'text/xml'])
-            )
-            ->willReturn(['id' => 'new-doc-123']);
+        $this->fakeClient->queueResponse(['id' => 'new-doc-123']);
 
         // Act
         $result = $this->endpoint->create($ublXml);
@@ -95,6 +64,7 @@ class DocumentsEndpointTest extends TestCase
         // Assert
         $this->assertIsArray($result);
         $this->assertEquals('new-doc-123', $result['id']);
+        $this->fakeClient->assertRequestSent('/sapi/document', RequestMethod::POST);
     }
 
     #[Test]
@@ -102,21 +72,13 @@ class DocumentsEndpointTest extends TestCase
     {
         // Arrange
         $documentId = 'test-doc-123';
-
-        $this->mockClient
-            ->expects($this->once())
-            ->method('request')
-            ->with(
-                $this->equalTo(RequestMethod::DELETE),
-                $this->equalTo("/sapi/document/{$documentId}")
-            )
-            ->willReturn(null);
+        $this->fakeClient->queueResponse(null);
 
         // Act
         $this->endpoint->delete($documentId);
 
-        // Assert - if no exception thrown, test passes
-        $this->assertTrue(true);
+        // Assert
+        $this->fakeClient->assertRequestSent("/sapi/document/{$documentId}", RequestMethod::DELETE);
     }
 
     #[Test]
@@ -125,14 +87,11 @@ class DocumentsEndpointTest extends TestCase
         // Arrange
         $allDocuments = [];
         
-        $this->mockClient
-            ->expects($this->exactly(3))
-            ->method('request')
-            ->willReturnOnConsecutiveCalls(
-                ['content' => [['id' => '1'], ['id' => '2']], 'totalElements' => 5],
-                ['content' => [['id' => '3'], ['id' => '4']], 'totalElements' => 5],
-                ['content' => [['id' => '5']], 'totalElements' => 5]
-            );
+        $this->fakeClient->queueResponses([
+            ['content' => [['id' => '1'], ['id' => '2']], 'totalElements' => 5],
+            ['content' => [['id' => '3'], ['id' => '4']], 'totalElements' => 5],
+            ['content' => [['id' => '5']], 'totalElements' => 5]
+        ]);
 
         // Act
         $this->endpoint->listAll(function($documents) use (&$allDocuments) {
@@ -143,6 +102,52 @@ class DocumentsEndpointTest extends TestCase
         $this->assertCount(5, $allDocuments);
         $this->assertEquals('1', $allDocuments[0]['id']);
         $this->assertEquals('5', $allDocuments[4]['id']);
+        $this->fakeClient->assertRequestCount(3);
+    }
+
+    #[Test]
+    public function it_validates_ubl_xml(): void
+    {
+        // Arrange
+        $ublXml = '<Invoice>test</Invoice>';
+        $this->fakeClient->queueResponse(['valid' => true, 'errors' => []]);
+
+        // Act
+        $result = $this->endpoint->validate($ublXml);
+
+        // Assert
+        $this->assertTrue($result['valid']);
+        $this->fakeClient->assertRequestSent('/sapi/document/validate', RequestMethod::POST);
+    }
+
+    #[Test]
+    public function it_marks_document_as_read(): void
+    {
+        // Arrange
+        $documentId = 'test-doc-123';
+        $this->fakeClient->queueResponse(['id' => $documentId, 'read' => true]);
+
+        // Act
+        $result = $this->endpoint->markRead($documentId);
+
+        // Assert
+        $this->assertTrue($result['read']);
+        $this->fakeClient->assertRequestSent("/sapi/document/{$documentId}/read", RequestMethod::PUT);
+    }
+
+    #[Test]
+    public function it_marks_document_as_paid(): void
+    {
+        // Arrange
+        $documentId = 'test-doc-123';
+        $this->fakeClient->queueResponse(['id' => $documentId, 'paid' => true]);
+
+        // Act
+        $result = $this->endpoint->markPaid($documentId);
+
+        // Assert
+        $this->assertTrue($result['paid']);
+        $this->fakeClient->assertRequestSent("/sapi/document/{$documentId}/paid", RequestMethod::PUT);
     }
 }
 

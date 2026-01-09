@@ -26,12 +26,6 @@ class HttpClient implements ClientInterface
         array $queryParams = [],
         array $headers = []
     ): mixed {
-        $url = ltrim($endpoint, '/');
-        
-        if (!empty($queryParams)) {
-            $url .= '?' . http_build_query($queryParams);
-        }
-
         $http = Http::baseUrl($this->baseUrl)
             ->accept('application/json')
             ->timeout(30);
@@ -48,15 +42,15 @@ class HttpClient implements ClientInterface
         $isXmlContent = isset($headers['Content-Type']) && $headers['Content-Type'] === 'text/xml';
 
         $response = match ($method) {
-            RequestMethod::GET => $http->get($url)->throw(),
+            RequestMethod::GET => $http->get($endpoint, $queryParams)->throw(),
             RequestMethod::POST => $isXmlContent 
-                ? $http->withBody($data['body'] ?? '', 'text/xml')->post($url)->throw()
-                : $http->post($url, $data)->throw(),
+                ? $http->withBody($data['body'] ?? '', 'text/xml')->post($endpoint, $queryParams)->throw()
+                : $http->post($endpoint, array_merge($data, $queryParams))->throw(),
             RequestMethod::PUT => $isXmlContent 
-                ? $http->withBody($data['body'] ?? '', 'text/xml')->put($url)->throw()
-                : $http->put($url, $data)->throw(),
-            RequestMethod::DELETE => $http->delete($url, $data)->throw(),
-            RequestMethod::PATCH => $http->patch($url, $data)->throw(),
+                ? $http->withBody($data['body'] ?? '', 'text/xml')->put($endpoint, $queryParams)->throw()
+                : $http->put($endpoint, array_merge($data, $queryParams))->throw(),
+            RequestMethod::DELETE => $http->delete($endpoint, array_merge($data, $queryParams))->throw(),
+            RequestMethod::PATCH => $http->patch($endpoint, array_merge($data, $queryParams))->throw(),
         };
 
         $contentType = $response->header('Content-Type');

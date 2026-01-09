@@ -2,23 +2,23 @@
 
 namespace Tests\Unit\Services\LetsPeppol;
 
-use App\Services\LetsPeppol\Contracts\ClientInterface;
 use App\Services\LetsPeppol\Endpoints\App\CompanyEndpoint;
 use App\Services\LetsPeppol\Enums\RequestMethod;
+use App\Services\LetsPeppol\Testing\FakeClient;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 class CompanyEndpointTest extends TestCase
 {
-    private ClientInterface $mockClient;
+    private FakeClient $fakeClient;
     private CompanyEndpoint $endpoint;
 
     protected function setUp(): void
     {
         parent::setUp();
         
-        $this->mockClient = $this->createMock(ClientInterface::class);
-        $this->endpoint = new CompanyEndpoint($this->mockClient);
+        $this->fakeClient = new FakeClient();
+        $this->endpoint = new CompanyEndpoint($this->fakeClient);
     }
 
     #[Test]
@@ -30,21 +30,15 @@ class CompanyEndpointTest extends TestCase
             'name' => 'Test Company BVBA',
             'vatNumber' => 'BE0123456789',
         ];
-
-        $this->mockClient
-            ->expects($this->once())
-            ->method('request')
-            ->with(
-                $this->equalTo(RequestMethod::GET),
-                $this->equalTo('/sapi/company')
-            )
-            ->willReturn($expectedCompany);
+        
+        $this->fakeClient->queueResponse($expectedCompany);
 
         // Act
         $result = $this->endpoint->get();
 
         // Assert
         $this->assertEquals($expectedCompany, $result);
+        $this->fakeClient->assertRequestSent('/sapi/company', RequestMethod::GET);
     }
 
     #[Test]
@@ -55,16 +49,9 @@ class CompanyEndpointTest extends TestCase
             'name' => 'Updated Company BVBA',
             'email' => 'new@company.com',
         ];
-
-        $this->mockClient
-            ->expects($this->once())
-            ->method('request')
-            ->with(
-                $this->equalTo(RequestMethod::PUT),
-                $this->equalTo('/sapi/company'),
-                $this->equalTo($companyData)
-            )
-            ->willReturn(array_merge($companyData, ['peppolId' => '0208:BE0123456789']));
+        
+        $expectedResponse = array_merge($companyData, ['peppolId' => '0208:BE0123456789']);
+        $this->fakeClient->queueResponse($expectedResponse);
 
         // Act
         $result = $this->endpoint->update($companyData);
@@ -72,5 +59,6 @@ class CompanyEndpointTest extends TestCase
         // Assert
         $this->assertArrayHasKey('name', $result);
         $this->assertEquals('Updated Company BVBA', $result['name']);
+        $this->fakeClient->assertRequestSentWithData('/sapi/company', $companyData, RequestMethod::PUT);
     }
 }

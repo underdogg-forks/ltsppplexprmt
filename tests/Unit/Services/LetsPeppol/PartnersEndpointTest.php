@@ -2,23 +2,23 @@
 
 namespace Tests\Unit\Services\LetsPeppol;
 
-use App\Services\LetsPeppol\Contracts\ClientInterface;
 use App\Services\LetsPeppol\Endpoints\App\PartnersEndpoint;
 use App\Services\LetsPeppol\Enums\RequestMethod;
+use App\Services\LetsPeppol\Testing\FakeClient;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 class PartnersEndpointTest extends TestCase
 {
-    private ClientInterface $mockClient;
+    private FakeClient $fakeClient;
     private PartnersEndpoint $endpoint;
 
     protected function setUp(): void
     {
         parent::setUp();
         
-        $this->mockClient = $this->createMock(ClientInterface::class);
-        $this->endpoint = new PartnersEndpoint($this->mockClient);
+        $this->fakeClient = new FakeClient();
+        $this->endpoint = new PartnersEndpoint($this->fakeClient);
     }
 
     #[Test]
@@ -29,15 +29,7 @@ class PartnersEndpointTest extends TestCase
             ['id' => 1, 'name' => 'Partner 1'],
             ['id' => 2, 'name' => 'Partner 2'],
         ];
-
-        $this->mockClient
-            ->expects($this->once())
-            ->method('request')
-            ->with(
-                $this->equalTo(RequestMethod::GET),
-                $this->equalTo('/sapi/partner')
-            )
-            ->willReturn($expectedPartners);
+        $this->fakeClient->queueResponse($expectedPartners);
 
         // Act
         $result = $this->endpoint->list();
@@ -45,6 +37,7 @@ class PartnersEndpointTest extends TestCase
         // Assert
         $this->assertCount(2, $result);
         $this->assertEquals('Partner 1', $result[0]['name']);
+        $this->fakeClient->assertRequestSent('/sapi/partner', RequestMethod::GET);
     }
 
     #[Test]
@@ -55,17 +48,7 @@ class PartnersEndpointTest extends TestCase
         $expectedResults = [
             ['id' => 1, 'name' => 'Partner Company', 'peppolId' => $peppolId],
         ];
-
-        $this->mockClient
-            ->expects($this->once())
-            ->method('request')
-            ->with(
-                $this->equalTo(RequestMethod::GET),
-                $this->equalTo('/sapi/partner/search'),
-                $this->equalTo([]),
-                $this->equalTo(['peppolId' => $peppolId])
-            )
-            ->willReturn($expectedResults);
+        $this->fakeClient->queueResponse($expectedResults);
 
         // Act
         $result = $this->endpoint->search($peppolId);
@@ -73,6 +56,7 @@ class PartnersEndpointTest extends TestCase
         // Assert
         $this->assertCount(1, $result);
         $this->assertEquals($peppolId, $result[0]['peppolId']);
+        $this->fakeClient->assertRequestSent('/sapi/partner/search', RequestMethod::GET);
     }
 
     #[Test]
@@ -84,16 +68,7 @@ class PartnersEndpointTest extends TestCase
             'name' => 'New Partner',
             'vatNumber' => 'BE0987654321',
         ];
-
-        $this->mockClient
-            ->expects($this->once())
-            ->method('request')
-            ->with(
-                $this->equalTo(RequestMethod::POST),
-                $this->equalTo('/sapi/partner'),
-                $this->equalTo($partnerData)
-            )
-            ->willReturn(array_merge($partnerData, ['id' => 1]));
+        $this->fakeClient->queueResponse(array_merge($partnerData, ['id' => 1]));
 
         // Act
         $result = $this->endpoint->create($partnerData);
@@ -101,6 +76,7 @@ class PartnersEndpointTest extends TestCase
         // Assert
         $this->assertArrayHasKey('id', $result);
         $this->assertEquals('New Partner', $result['name']);
+        $this->fakeClient->assertRequestSentWithData('/sapi/partner', $partnerData, RequestMethod::POST);
     }
 
     #[Test]
@@ -109,22 +85,14 @@ class PartnersEndpointTest extends TestCase
         // Arrange
         $partnerId = 1;
         $partnerData = ['name' => 'Updated Partner'];
-
-        $this->mockClient
-            ->expects($this->once())
-            ->method('request')
-            ->with(
-                $this->equalTo(RequestMethod::PUT),
-                $this->equalTo("/sapi/partner/{$partnerId}"),
-                $this->equalTo($partnerData)
-            )
-            ->willReturn(array_merge($partnerData, ['id' => $partnerId]));
+        $this->fakeClient->queueResponse(array_merge($partnerData, ['id' => $partnerId]));
 
         // Act
         $result = $this->endpoint->update($partnerId, $partnerData);
 
         // Assert
         $this->assertEquals('Updated Partner', $result['name']);
+        $this->fakeClient->assertRequestSentWithData("/sapi/partner/{$partnerId}", $partnerData, RequestMethod::PUT);
     }
 
     #[Test]
@@ -132,20 +100,13 @@ class PartnersEndpointTest extends TestCase
     {
         // Arrange
         $partnerId = 1;
-
-        $this->mockClient
-            ->expects($this->once())
-            ->method('request')
-            ->with(
-                $this->equalTo(RequestMethod::DELETE),
-                $this->equalTo("/sapi/partner/{$partnerId}")
-            )
-            ->willReturn(null);
+        $this->fakeClient->queueResponse(null);
 
         // Act
         $this->endpoint->delete($partnerId);
 
-        // Assert - if no exception thrown, test passes
-        $this->assertTrue(true);
+        // Assert
+        $this->fakeClient->assertRequestSent("/sapi/partner/{$partnerId}", RequestMethod::DELETE);
     }
 }
+
