@@ -23,7 +23,16 @@ class FakeClient implements ClientInterface
      */
     public function queueResponse(mixed $response): static
     {
-        $this->responses[] = $response;
+        $this->responses[] = ['type' => 'response', 'value' => $response];
+        return $this;
+    }
+
+    /**
+     * Queue an exception to be thrown
+     */
+    public function queueException(\Throwable $exception): static
+    {
+        $this->responses[] = ['type' => 'exception', 'value' => $exception];
         return $this;
     }
 
@@ -54,9 +63,15 @@ class FakeClient implements ClientInterface
             'headers' => $headers,
         ];
 
-        // Return queued response or empty array
+        // Return queued response or throw queued exception
         if (isset($this->responses[$this->responseIndex])) {
-            return $this->responses[$this->responseIndex++];
+            $response = $this->responses[$this->responseIndex++];
+            
+            if ($response['type'] === 'exception') {
+                throw $response['value'];
+            }
+            
+            return $response['value'];
         }
 
         return [];
