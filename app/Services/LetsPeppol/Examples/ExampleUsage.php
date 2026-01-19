@@ -41,11 +41,11 @@ class ExampleUsage
         $peppolId = '0208:BE0123456789';
         
         // Step 1: Get company information
-        $company = $this->client->kyc()->getCompany($peppolId);
+        $company = $this->client->kyc()->registration()->getCompany($peppolId);
         echo "Company: {$company['name']}\n";
         
         // Step 2: Confirm company and send verification email
-        $result = $this->client->kyc()->confirmCompany([
+        $result = $this->client->kyc()->registration()->confirmCompany([
             'peppolId' => $peppolId,
             'email' => 'admin@company.com',
             'name' => 'John Doe',
@@ -55,7 +55,7 @@ class ExampleUsage
         
         // Step 3: After user clicks email link, verify token
         $tokenFromEmail = 'token-from-email-link';
-        $verification = $this->client->kyc()->verifyToken($tokenFromEmail);
+        $verification = $this->client->kyc()->registration()->verifyToken($tokenFromEmail);
         echo "Email verified! Directors: " . count($verification['directors']) . "\n";
         
         // Steps 4-6 involve Web eID signing (requires Belgian eID card)
@@ -71,7 +71,7 @@ class ExampleUsage
         $ublXml = file_get_contents('path/to/invoice.xml');
         
         // Validate the document
-        $validation = $this->client->app()->validateDocument($ublXml);
+        $validation = $this->client->app()->documents()->validate($ublXml);
         
         if (!$validation['valid']) {
             echo "Validation errors:\n";
@@ -80,15 +80,15 @@ class ExampleUsage
         }
         
         // Create document as draft
-        $document = $this->client->app()->createDocument($ublXml, true);
+        $document = $this->client->app()->documents()->create($ublXml, true);
         echo "Document created: {$document['id']}\n";
         
         // Send the document
-        $sent = $this->client->app()->sendDocument($document['id']);
+        $sent = $this->client->app()->documents()->send($document['id']);
         echo "Document sent!\n";
         
         // List all documents with filters
-        $documents = $this->client->app()->listDocuments([
+        $documents = $this->client->app()->documents()->list([
             'type' => 'INVOICE',
             'direction' => 'OUTGOING',
             'draft' => false
@@ -103,7 +103,7 @@ class ExampleUsage
     public function receiveDocumentsExample(): void
     {
         // Get new received documents from proxy
-        $newDocs = $this->client->proxy()->getAllNewDocuments(100);
+        $newDocs = $this->client->proxy()->documents()->getAllNew(100);
         
         echo "Received " . count($newDocs) . " new documents\n";
         
@@ -117,7 +117,7 @@ class ExampleUsage
             $this->processDocument($doc);
             
             // Mark as downloaded
-            $this->client->proxy()->markDownloaded($doc['id']);
+            $this->client->proxy()->documents()->markDownloaded($doc['id']);
             echo "Marked as downloaded\n";
         }
     }
@@ -128,15 +128,15 @@ class ExampleUsage
     public function partnerManagementExample(): void
     {
         // List all partners
-        $partners = $this->client->app()->listPartners();
+        $partners = $this->client->app()->partners()->list();
         echo "Total partners: " . count($partners) . "\n";
         
         // Search for a specific partner
-        $searchResults = $this->client->app()->searchPartners('0208:BE0987654321');
+        $searchResults = $this->client->app()->partners()->search('0208:BE0987654321');
         
         if (empty($searchResults)) {
             // Create new partner
-            $partner = $this->client->app()->createPartner([
+            $partner = $this->client->app()->partners()->create([
                 'peppolId' => '0208:BE0987654321',
                 'name' => 'Partner Company BVBA',
                 'vatNumber' => 'BE0987654321',
@@ -158,14 +158,14 @@ class ExampleUsage
     public function productCatalogExample(): void
     {
         // Create a category
-        $category = $this->client->app()->createCategory([
+        $category = $this->client->app()->productCategories()->create([
             'name' => 'Electronics',
             'parentId' => null
         ]);
         echo "Category created: {$category['id']}\n";
         
         // Create a product
-        $product = $this->client->app()->createProduct([
+        $product = $this->client->app()->products()->create([
             'name' => 'Laptop',
             'description' => 'High-performance laptop',
             'price' => 999.99,
@@ -176,7 +176,7 @@ class ExampleUsage
         echo "Product created: {$product['id']}\n";
         
         // List all products
-        $products = $this->client->app()->listProducts();
+        $products = $this->client->app()->products()->list();
         echo "Total products: " . count($products) . "\n";
     }
 
@@ -186,14 +186,14 @@ class ExampleUsage
     public function companyInfoExample(): void
     {
         // Get current company information
-        $company = $this->client->app()->getCompany();
+        $company = $this->client->app()->company()->get();
         
         echo "Company: {$company['name']}\n";
         echo "Peppol ID: {$company['peppolId']}\n";
         echo "VAT: {$company['vatNumber']}\n";
         
         // Update company information
-        $updated = $this->client->app()->updateCompany([
+        $updated = $this->client->app()->company()->update([
             'peppolId' => $company['peppolId'],
             'name' => $company['name'],
             'email' => 'newemail@company.com',
@@ -210,7 +210,7 @@ class ExampleUsage
     public function statisticsExample(): void
     {
         // Get account totals
-        $totals = $this->client->app()->getAccountTotals();
+        $totals = $this->client->app()->statistics()->getAccount();
         
         echo "Statistics:\n";
         echo "Total Invoices: {$totals['totalInvoices']}\n";
@@ -225,7 +225,7 @@ class ExampleUsage
     public function peppolDirectorySearchExample(): void
     {
         // Search by company name
-        $results = $this->client->app()->searchPeppolDirectory('Microsoft', null);
+        $results = $this->client->app()->peppolDirectory()->search('Microsoft', null);
         
         echo "Search results:\n";
         if (is_array($results)) {
@@ -243,7 +243,7 @@ class ExampleUsage
     public function errorHandlingExample(): void
     {
         try {
-            $document = $this->client->app()->getDocument('non-existent-id');
+            $document = $this->client->app()->documents()->get('non-existent-id');
         } catch (\RuntimeException $e) {
             $statusCode = $e->getCode();
             $message = $e->getMessage();
@@ -286,7 +286,7 @@ class ExampleUsage
         $client = LetsPeppolClient::withToken($existingToken);
         
         // Now you can use all API methods
-        $company = $client->app()->getCompany();
+        $company = $client->app()->company()->get();
         echo "Company: {$company['name']}\n";
     }
 
@@ -302,7 +302,7 @@ class ExampleUsage
             '123e4567-e89b-12d3-a456-426614174002',
         ];
         
-        $updates = $this->client->proxy()->getStatusUpdates($documentIds);
+        $updates = $this->client->proxy()->documents()->getStatusUpdates($documentIds);
         
         foreach ($updates as $doc) {
             echo "Document {$doc['id']}: {$doc['status']}\n";
@@ -314,7 +314,7 @@ class ExampleUsage
             return true;
         });
         
-        $this->client->proxy()->markDownloadedBatch($downloadedIds);
+        $this->client->proxy()->documents()->markDownloadedBatch($downloadedIds);
         echo "Marked " . count($downloadedIds) . " documents as downloaded\n";
     }
 }
