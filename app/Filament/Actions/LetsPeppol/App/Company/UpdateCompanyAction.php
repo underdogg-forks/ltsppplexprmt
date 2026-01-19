@@ -55,9 +55,11 @@ class UpdateCompanyAction extends BaseLetsPeppolAction
                         ->company()
                         ->update($data);
 
+                    $companyName = $result['name'] ?? 'Company';
+                    
                     $this->notifySuccess(
                         'Company Updated',
-                        'Company information has been updated successfully.'
+                        "Updated {$companyName} successfully."
                     );
                 } catch (\Exception $e) {
                     $this->notifyError(

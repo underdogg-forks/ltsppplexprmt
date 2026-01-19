@@ -44,13 +44,17 @@ class ValidateDocumentAction extends BaseLetsPeppolAction
                             'The UBL XML is valid.'
                         );
                     } else {
-                        $errors = implode(', ', $result['errors'] ?? ['Unknown error']);
+                        // Normalize errors to ensure it's always an array
+                        $errorData = $result['errors'] ?? ['Unknown error'];
+                        $errors = is_array($errorData) ? $errorData : [$errorData];
+                        
+                        $errorsString = implode(', ', $errors);
                         $this->notifyError(
                             'Validation Failed',
-                            'Errors: ' . $errors
+                            'Errors: ' . $errorsString
                         );
                     }
-                } catch (\Exception $e) {
+                } catch (\Throwable $e) {
                     $this->notifyError(
                         'Validation Error',
                         $e->getMessage()

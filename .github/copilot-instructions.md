@@ -374,20 +374,26 @@ class DocumentsEndpointTest extends TestCase
 
 ### Testing Guidelines
 
-Write tests that mock the `ClientInterface`:
+Write tests using the project's `FakeClient` helper:
 
 ```php
+use App\Services\LetsPeppol\Testing\FakeClient;
+use App\Services\LetsPeppol\Enums\RequestMethod;
+
 public function test_endpoint_list(): void
 {
-    $mockClient = Mockery::mock(ClientInterface::class);
-    $mockClient->shouldReceive('request')
-        ->with(RequestMethod::GET, '/api/endpoint', [], [], [])
-        ->andReturn(['data' => 'test']);
-
-    $endpoint = new EndpointClient($mockClient);
+    // Arrange
+    $fakeClient = new FakeClient();
+    $fakeClient->queueResponse(['data' => 'test']);
+    
+    $endpoint = new EndpointClient($fakeClient);
+    
+    // Act
     $result = $endpoint->list();
-
+    
+    // Assert
     $this->assertEquals(['data' => 'test'], $result);
+    $fakeClient->assertRequestSent('/api/endpoint', RequestMethod::GET);
 }
 ```
 
